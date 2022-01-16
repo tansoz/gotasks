@@ -6,16 +6,16 @@ type Worker interface {
 
 type worker struct {
 	signal chan bool
-	queue  <-chan func()
+	tasks  *tasks
 }
 
-func NewWorker(queue <-chan func(), logfn func(...interface{})) Worker {
+func (tks *tasks) NewWorker() Worker {
 	w := new(worker)
 
-	w.queue = queue
+	w.tasks = tks
 	w.signal = make(chan bool, 1)
 
-	go w.run(logfn)
+	go w.run(w.tasks.logfn)
 
 	return w
 }
@@ -35,8 +35,10 @@ func (w *worker) run(logfn func(...interface{})) {
 		select {
 		case <-w.signal:
 			return
-		case task := <-w.queue:
+		case task := <-w.tasks.queue:
+			w.tasks.active += 1
 			task()
+			w.tasks.active -= 1
 		}
 	}
 }

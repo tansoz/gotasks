@@ -4,7 +4,9 @@ import "log"
 
 type Tasks interface {
 	Add(func()) error
+	AddSync(func()) error
 	Quit() error
+	Active() int
 }
 
 type tasks struct {
@@ -12,6 +14,7 @@ type tasks struct {
 	signal  chan bool
 	logfn   func(...interface{})
 	workers []Worker
+	active  int
 }
 
 func NewTasks(workers int, fn func(Tasks), logfn func(...interface{})) error {
@@ -21,6 +24,7 @@ func NewTasks(workers int, fn func(Tasks), logfn func(...interface{})) error {
 	tks.signal = make(chan bool, 1)
 	tks.workers = make([]Worker, workers)
 	tks.logfn = logfn
+	tks.active = 0
 
 	if tks.logfn == nil {
 		tks.logfn = log.Println
@@ -38,13 +42,25 @@ func (tks *tasks) close() {
 }
 func (tks *tasks) newWorkers(workers int) error {
 	for i := 0; i < workers; i++ {
-		tks.workers[i] = NewWorker(tks.queue, tks.logfn)
+		tks.workers[i] = tks.NewWorker()
 	}
 	return nil
 }
 func (tks *tasks) Add(task func()) error {
 	tks.queue <- task
 	return nil
+}
+func (tks *tasks) AddSync(task func()) error {
+	signal := make(chan bool, 1) // 任务完成信号
+	tks.queue <- func() {
+		task()
+		signal <- true
+	}
+	<-signal
+	return nil
+}
+func (tks *tasks) Active() int {
+	return tks.active
 }
 func (tks *tasks) Quit() error {
 	defer tks.quitWorkers()
@@ -53,7 +69,7 @@ func (tks *tasks) Quit() error {
 	return nil
 }
 func (tks *tasks) quitWorkers() {
-	for _, worker := range tks.workers {
-		worker.Quit()
+	for _, wk := range tks.workers {
+		wk.Quit()
 	}
 }
