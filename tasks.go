@@ -3,8 +3,8 @@ package gotasks
 import "log"
 
 type Tasks interface {
-	Add(func()) error
-	AddSync(func()) error
+	Async(func()) error
+	Sync(func()) error
 	Quit() error
 	Active() int
 }
@@ -46,11 +46,11 @@ func (tks *tasks) newWorkers(workers int) error {
 	}
 	return nil
 }
-func (tks *tasks) Add(task func()) error {
+func (tks *tasks) Async(task func()) error {
 	tks.queue <- task
 	return nil
 }
-func (tks *tasks) AddSync(task func()) error {
+func (tks *tasks) Sync(task func()) error {
 	signal := make(chan bool, 1) // 任务完成信号
 	tks.queue <- func() {
 		task()

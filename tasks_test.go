@@ -14,7 +14,7 @@ func TestNewTasks(t *testing.T) {
 	NewTasks(5, func() func(Tasks) {
 		return func(t Tasks) {
 			http.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
-				t.AddSync(func() {
+				t.Sync(func() {
 					writer.Write([]byte("Hello World!"))
 					fmt.Println("跑...")
 				})
@@ -36,7 +36,7 @@ func TestNewTasks2(t *testing.T) {
 		return func(t Tasks) {
 			for {
 				if client, accept_err := listener.Accept(); accept_err == nil {
-					t.Add(func(conn net.Conn) func() {
+					t.Async(func(conn net.Conn) func() {
 						return func() {
 							fmt.Println(t.Active())
 							conn.Write([]byte("HTTP/1.0 200 OK\r\nContent-length: 12\r\n\r\nHello World!"))
