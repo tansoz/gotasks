@@ -1,6 +1,9 @@
 package gotasks
 
-import "log"
+import (
+	"errors"
+	"log"
+)
 
 type Tasks interface {
 	Async(func()) error
@@ -47,10 +50,16 @@ func (tks *tasks) newWorkers(workers int) error {
 	return nil
 }
 func (tks *tasks) Async(task func()) error {
+	if task == nil {
+		return errors.New("the task can not be a null")
+	}
 	tks.queue <- task
 	return nil
 }
 func (tks *tasks) Sync(task func()) error {
+	if task == nil {
+		return errors.New("the task can not be a null")
+	}
 	signal := make(chan bool, 1) // 任务完成信号
 	tks.queue <- func() {
 		task()
